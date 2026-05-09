@@ -72,8 +72,9 @@ def createLabelImage(labelSize : tuple, endlessMargin : int, text : str, textFon
 
     if dueDate:
         (_, _, ddRight, ddBottom) = dueDateFont.getbbox(dueDate)
+        ddX = barcode.size[0] + (label.size[0] - barcode.size[0] - ddRight) / 2
         draw.text(
-            [label.size[0] - ddRight, label.size[1] - ddBottom - marginBottom],
+            [ddX, label.size[1] - ddBottom - marginBottom],
             dueDate,
             fill = ImageColor.getrgb("#000"),
             font = dueDateFont

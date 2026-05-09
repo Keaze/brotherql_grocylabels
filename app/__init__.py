@@ -7,6 +7,7 @@ from brother_ql.labels import ALL_LABELS, Color
 from brother_ql import BrotherQLRaster, create_label
 from brother_ql.backends import guess_backend, backend_factory
 from app.imaging import createBarcode, createLabelImage
+from app.grocy import GrocyRequest
 
 load_dotenv()
 
@@ -20,6 +21,8 @@ NAME_MAX_LINES = int(getenv("NAME_MAX_LINES", "4"))
 DUE_DATE_FONT =  getenv("NAME_FONT", "NotoSerif-Regular.ttf")
 DUE_DATE_FONT_SIZE = int(getenv("DUE_DATE_FONT_SIZE", "30"))
 ENDLESS_MARGIN = int(getenv("ENDLESS_MARGIN", "10"))
+PURCHASE_DATE_PREFIX = getenv("PURCHASE_DATE_PREFIX", "P")
+DUE_DATE_PREFIX = getenv("DUE_DATE_PREFIX", "D")
 
 selected_backend = guess_backend(PRINTER_PATH)
 BACKEND_CLASS = backend_factory(selected_backend)['backend_class']
@@ -78,17 +81,29 @@ def test():
 
     return Response(buf, 200, mimetype="image/png")
 
+def build_date_text(gr: GrocyRequest) -> str:
+    parts = []
+    if gr.purchase_date:
+        parts.append(f"{PURCHASE_DATE_PREFIX}: {gr.purchase_date}")
+    if gr.due_date:
+        parts.append(f"{DUE_DATE_PREFIX}: {gr.due_date}")
+    return "  ".join(parts)
+
 @app.route("/print/json", methods=["POST"])
 def print_json_route():
-    data = request.get_json()
-    print("POST /print/json:", data, flush=True)
+    gr = GrocyRequest.from_json(request.get_json())
+    label = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
+    sendToPrinter(label)
     return Response("OK", 200)
 
 @app.route("/image/json", methods=["POST"])
 def image_json_route():
-    data = request.get_json()
-    print("POST /image/json:", data, flush=True)
-    return Response("OK", 200)
+    gr = GrocyRequest.from_json(request.get_json())
+    img = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return Response(buf, 200, mimetype="image/png")
 
 def sendToPrinter(image : Image):
     bql = BrotherQLRaster(PRINTER_MODEL)
