@@ -5,12 +5,16 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      - LABEL_SIZE=29x90
-      - #LABEL_SIZE=62red
-      - PRINTER_MODEL=QL-800
-      - PRINTER_PATH=file:///dev/usb/lp0
-      - BARCODE_FORMAT=QRCode
+      - LABEL_SIZE=${LABEL_SIZE:-29x90}
+      - PRINTER_MODEL=${PRINTER_MODEL:-QL-800}
+      - PRINTER_PATH=${PRINTER_PATH:-file:///dev/usb/lp0}
+      - BARCODE_FORMAT=${BARCODE_FORMAT:-QRCode}
+      - NAME_FONT=${NAME_FONT:-NotoSerif-Regular.ttf}
+      - NAME_FONT_SIZE=${NAME_FONT_SIZE:-48}
+      - NAME_MAX_LINES=${NAME_MAX_LINES:-4}
+      - DUE_DATE_FONT_SIZE=${DUE_DATE_FONT_SIZE:-30}
+      - ENDLESS_MARGIN=${ENDLESS_MARGIN:-10}
     devices:
-      - '/dev/usb/lp0:/dev/usb/lp0'
+      - '${PRINTER_DEVICE:-/dev/usb/lp0}:${PRINTER_DEVICE:-/dev/usb/lp0}'
     ports:
-      - "9285:8000"
+      - "${HOST_PORT:-9285}:8000"
