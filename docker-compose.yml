@@ -2,10 +2,15 @@ version: "3.8"
 
 services:
   printer:
-    image: sam159/brotherql_grocylabels:latest
+    build: .
     restart: unless-stopped
     environment:
-      - PRINTER_MODEL=QL-500
-      - PRINTER_PATH=file:///dev/usb/lp1
+      - LABEL_SIZE=29x90
+      - #LABEL_SIZE=62red
+      - PRINTER_MODEL=QL-800
+      - PRINTER_PATH=file:///dev/usb/lp0
+      - BARCODE_FORMAT=QRCode
+    devices:
+      - '/dev/usb/lp0:/dev/usb/lp0'
     ports:
-      - 8000:8000
+      - "9285:8000"

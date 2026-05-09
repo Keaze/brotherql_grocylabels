@@ -8,7 +8,7 @@ def createDatamatrix(text: str):
     return barcode
 
 def createQRCode(text: str):
-    return qrcode.make(text, box_size = 1)
+    return qrcode.make(text, box_size=1).convert("RGB")
 
 def createBarcode(text: str, type: str):
     match type:
@@ -21,11 +21,14 @@ def createBarcode(text: str, type: str):
 
 def createLabelImage(labelSize : tuple, endlessMargin : int, text : str, textFont : ImageFont, textFontSize : int, textMaxLines : int, barcode : Image, dueDate : str, dueDateFont : ImageFont):
     (width, height) = labelSize
-    # default line spacing used by multiline_text, doesn't seem to have an effect if changed though but we need to take into account
     lineSpacing = 4
-    # margin to use for label
     marginTop = 0
     marginBottom = 0
+
+    # portrait die-cut labels (height > width): work in landscape orientation, rotate at end
+    rotateOutput = height != 0 and height > width
+    if rotateOutput:
+        width, height = height, width
 
     # for endless labels with a height of zero
     if height == 0:
@@ -41,15 +44,11 @@ def createLabelImage(labelSize : tuple, endlessMargin : int, text : str, textFon
             (_, _, _, ddBottom) = dueDateFont.getbbox(dueDate)
             height += ddBottom
 
-    # increase the size of the barcode if space permits
-    if (barcode.size[1] * 8) < height:
-        barcode = barcode.resize((barcode.size[0] * 8, barcode.size[1] * 8), Image.Resampling.NEAREST)
-    if (barcode.size[1] * 6) < height:
-        barcode = barcode.resize((barcode.size[0] * 6, barcode.size[1] * 6), Image.Resampling.NEAREST)
-    if (barcode.size[1] * 4) < height:
-        barcode = barcode.resize((barcode.size[0] * 4, barcode.size[1] * 4), Image.Resampling.NEAREST)
-    if (barcode.size[1] * 2) < height:
-        barcode = barcode.resize((barcode.size[0] * 2, barcode.size[1] * 2), Image.Resampling.NEAREST)
+    # increase the size of the barcode if space permits (must fit both height and width)
+    for scale in (8, 6, 4, 2):
+        if (barcode.size[1] * scale) < height and (barcode.size[0] * scale) < width:
+            barcode = barcode.resize((barcode.size[0] * scale, barcode.size[1] * scale), Image.Resampling.NEAREST)
+            break
     
     label = Image.new("RGB", (width, height), ImageColor.getrgb("#FFF"))
     # vertically align barcode (ignoring margin)
@@ -80,6 +79,9 @@ def createLabelImage(labelSize : tuple, endlessMargin : int, text : str, textFon
             font = dueDateFont
         )
 
+    if rotateOutput:
+        label = label.rotate(90, expand=True)
+
     return label
 
 def wrapText(text : str, font : ImageFont, maxWidth : int, maxLines : int):
@@ -109,7 +111,7 @@ def wrapText(text : str, font : ImageFont, maxWidth : int, maxLines : int):
         while len(parts) > 0:
             nextPart = parts.pop()
 
-            if font.getlength(' '.join(nextLine) + ' ' + nextPart) < maxWidth:
+            if font.getlength(' '.join(nextLine + [nextPart])) < maxWidth:
                 nextLine.append(nextPart)
             else:
                 # didn't fit so put it back on the stack
