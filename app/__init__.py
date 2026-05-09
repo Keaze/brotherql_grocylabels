@@ -1,4 +1,3 @@
-import logging
 from io import BytesIO
 from os import path, getenv
 from flask import Flask, Response, request
@@ -32,7 +31,6 @@ nameFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", NAME_FONT), NAME
 ddFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", DUE_DATE_FONT), DUE_DATE_FONT_SIZE)
 
 app = Flask(__name__)
-logger = logging.getLogger(__name__)
 
 @app.route("/")
 def home_route():
@@ -83,13 +81,13 @@ def test():
 @app.route("/print/json", methods=["POST"])
 def print_json_route():
     data = request.get_json()
-    logger.info("POST /print/json: %s", data)
+    print("POST /print/json:", data, flush=True)
     return Response("OK", 200)
 
 @app.route("/image/json", methods=["POST"])
 def image_json_route():
     data = request.get_json()
-    logger.info("POST /image/json: %s", data)
+    print("POST /image/json:", data, flush=True)
     return Response("OK", 200)
 
 def sendToPrinter(image : Image):
