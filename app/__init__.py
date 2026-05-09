@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 from os import path, getenv
 from flask import Flask, Response, request
@@ -31,6 +32,7 @@ nameFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", NAME_FONT), NAME
 ddFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", DUE_DATE_FONT), DUE_DATE_FONT_SIZE)
 
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
 
 @app.route("/")
 def home_route():
@@ -77,6 +79,18 @@ def test():
     buf.seek(0)
 
     return Response(buf, 200, mimetype="image/png")
+
+@app.route("/print/json", methods=["POST"])
+def print_json_route():
+    data = request.get_json()
+    logger.info("POST /print/json: %s", data)
+    return Response("OK", 200)
+
+@app.route("/image/json", methods=["POST"])
+def image_json_route():
+    data = request.get_json()
+    logger.info("POST /image/json: %s", data)
+    return Response("OK", 200)
 
 def sendToPrinter(image : Image):
     bql = BrotherQLRaster(PRINTER_MODEL)
