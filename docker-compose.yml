@@ -14,6 +14,8 @@ services:
       - NAME_MAX_LINES=${NAME_MAX_LINES:-4}
       - DUE_DATE_FONT_SIZE=${DUE_DATE_FONT_SIZE:-30}
       - ENDLESS_MARGIN=${ENDLESS_MARGIN:-10}
+      - PURCHASE_DATE_PREFIX=${PURCHASE_DATE_PREFIX:-P}
+      - DUE_DATE_PREFIX=${DUE_DATE_PREFIX:-D}
     devices:
       - '${PRINTER_DEVICE:-/dev/usb/lp0}:${PRINTER_DEVICE:-/dev/usb/lp0}'
     ports:
