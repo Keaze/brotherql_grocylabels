@@ -1,5 +1,6 @@
 from io import BytesIO
 from os import path, getenv
+from threading import Thread
 from flask import Flask, Response, request
 from PIL import Image, ImageFont
 from dotenv import load_dotenv
@@ -101,6 +102,18 @@ def print_json_route():
     gr = GrocyRequest.from_json(request.get_json())
     label = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
     sendToPrinter(label)
+    return Response("OK", 200)
+
+@app.route("/print/json/async", methods=["POST"])
+def print_json_async_route():
+    gr = GrocyRequest.from_json(request.get_json())
+    def do_print():
+        try:
+            label = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
+            sendToPrinter(label)
+        except Exception as e:
+            print(f"print/json/async error: {e}", flush=True)
+    Thread(target=do_print, daemon=True).start()
     return Response("OK", 200)
 
 @app.route("/image/json", methods=["POST"])
