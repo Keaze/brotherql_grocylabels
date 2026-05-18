@@ -89,6 +89,13 @@ def build_date_text(gr: GrocyRequest) -> str:
         parts.append(f"{DUE_DATE_PREFIX}: {gr.due_date}")
     return "  ".join(parts)
 
+@app.route("/print/test", methods=["POST"])
+def print_test_route():
+    gr = GrocyRequest.from_json(request.get_json())
+    date_text = build_date_text(gr)
+    print(f"print/test: product={gr.product!r} grocycode={gr.grocycode!r} dates={date_text!r}", flush=True)
+    return Response("OK", 200)
+
 @app.route("/print/json", methods=["POST"])
 def print_json_route():
     gr = GrocyRequest.from_json(request.get_json())
