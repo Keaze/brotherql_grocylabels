@@ -1,5 +1,6 @@
 from io import BytesIO
 from os import path, getenv
+from queue import Queue
 from threading import Thread
 from flask import Flask, Response, request
 from PIL import Image, ImageFont
@@ -35,6 +36,20 @@ nameFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", NAME_FONT), NAME
 ddFont = ImageFont.truetype(path.join(thisDir, "..", "fonts", DUE_DATE_FONT), DUE_DATE_FONT_SIZE)
 
 app = Flask(__name__)
+
+_print_queue: Queue = Queue()
+
+def _print_worker():
+    while True:
+        label = _print_queue.get()
+        try:
+            sendToPrinter(label)
+        except Exception as e:
+            print(f"print queue error: {e}", flush=True)
+        finally:
+            _print_queue.task_done()
+
+Thread(target=_print_worker, daemon=True).start()
 
 @app.route("/")
 def home_route():
@@ -107,13 +122,8 @@ def print_json_route():
 @app.route("/print/json/async", methods=["POST"])
 def print_json_async_route():
     gr = GrocyRequest.from_json(request.get_json())
-    def do_print():
-        try:
-            label = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
-            sendToPrinter(label)
-        except Exception as e:
-            print(f"print/json/async error: {e}", flush=True)
-    Thread(target=do_print, daemon=True).start()
+    label = createLabelImage(label_spec.dots_printable, ENDLESS_MARGIN, gr.product, nameFont, NAME_FONT_SIZE, NAME_MAX_LINES, createBarcode(gr.grocycode, BARCODE_FORMAT), build_date_text(gr), ddFont)
+    _print_queue.put(label)
     return Response("OK", 200)
 
 @app.route("/image/json", methods=["POST"])
