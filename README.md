@@ -7,11 +7,13 @@ This project is intended to be a webhook target for [Grocy](https://github.com/g
 Datamatrix or QR codes can be used with Datamatrix being the default. Datamatrix will fit better in smaller labels but I've found aren't as easily read by the Grocy 
 barcode reader or by the [Android App](https://github.com/patzly/grocy-android).
 
-Only die-cut labels are supported as I don't have any endless rolls to test with.
+Endless label rolls are supported (e.g. `62` label size) in addition to die-cut labels.
 
 ## Connecting Grocy
 
 Once you have this running somewhere update your config at `app/data/config.php` to match the following. Presuming that you have this running on localhost at port 8000.
+
+### Query-param endpoint (basic)
 
 ```
     // Label printer settings
@@ -19,6 +21,19 @@ Once you have this running somewhere update your config at `app/data/config.php`
     Setting('LABEL_PRINTER_RUN_SERVER', true);
     Setting('LABEL_PRINTER_PARAMS', []);
     Setting('LABEL_PRINTER_HOOK_JSON', false);
+
+    Setting('FEATURE_FLAG_LABEL_PRINTER', true);
+```
+
+### JSON endpoint (recommended — purchase & due dates)
+
+Use `/print/json/async` to avoid Grocy timeouts. Jobs are queued and sent to the printer sequentially.
+
+```
+    Setting('LABEL_PRINTER_WEBHOOK', 'http://127.0.0.1:8000/print/json/async');
+    Setting('LABEL_PRINTER_RUN_SERVER', true);
+    Setting('LABEL_PRINTER_PARAMS', []);
+    Setting('LABEL_PRINTER_HOOK_JSON', true);
 
     Setting('FEATURE_FLAG_LABEL_PRINTER', true);
 ```
@@ -39,21 +54,21 @@ The label size and printer are configured via environmental variables. You can a
 | DUE_DATE_FONT      | NotoSerif-Regular.ttf | The file name of the font in the fonts directory                                              |
 | DUE_DATE_FONT_SIZE | 30                    | The size of that font                                                                         |
 | ENDLESS_MARGIN     | 10                    | The top & bottom margin to add when using endless labels                                      |
+| PURCHASE_DATE_PREFIX | P                   | Label prefix for the purchase date                                                            |
+| DUE_DATE_PREFIX    | D                     | Label prefix for the due/best-before date                                                     |
 
 Included fonts are `NotoSans-Regular.ttf` and `NotoSerif-Regular.ttf`
 
-## Endless Labels
-
-These are supported, for example the `62` label size. The length of the label will be big enough to accommodate the max number of lines including a margin.
-You may want to experiment with font sizes and line count to get the most out of it.
-
 ## Endpoints
 
-Two endpoints are available `/print` and `/image` both accept the same parameters. `/image` will return the rendered image as a PNG instead of sending to the printer.
+### Query-param endpoints
 
-### Parameters
+| Endpoint | Method | Description |
+|---|---|---|
+| `/print` | GET, POST | Print label |
+| `/image` | GET | Return label as PNG (no printing) |
 
-POST or GET accepted.
+Parameters:
 
 | Name      | Use                                 |
 | --------- | ------------------------------------|
@@ -65,6 +80,32 @@ POST or GET accepted.
 | due_date  | the text at the bottom of the label |
 
 The name will use whichever parameter is given.
+
+### JSON endpoints
+
+Accept a JSON body matching the Grocy webhook payload (`LABEL_PRINTER_HOOK_JSON = true`). Purchase date and due date are read from `stock_entry`.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/print/json` | POST | Print label (blocks until printed) |
+| `/print/json/async` | POST | Enqueue print job, return immediately |
+| `/print/test` | POST | Log label values, no printing |
+| `/image/json` | POST | Return label as PNG (no printing) |
+
+Example payload:
+
+```json
+{
+  "product": "Milk",
+  "grocycode": "GRCY-P-1",
+  "stock_entry": {
+    "best_before_date": "2026-06-01",
+    "purchased_date": "2026-05-19"
+  }
+}
+```
+
+`/print/json/async` is recommended for Grocy webhooks — it returns `200 OK` immediately and serializes jobs through a queue so the printer is never hit concurrently.
 
 ## Running
 
